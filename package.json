@@ -1,0 +1,16 @@
+{
+  "name": "receitas",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Lista simples de receitas com Node, Express e Postgres",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "node server/server.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "express-session": "^1.19.0",
+    "pg": "^8.13.1"
+  }
+}

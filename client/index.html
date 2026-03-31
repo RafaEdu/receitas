@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Receitas</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <main class="container">
+      <h1>Lista de Receitas</h1>
+
+      <section id="loginSection" class="card">
+        <h2>Login</h2>
+        <form id="loginForm" class="form">
+          <label for="loginInput">Login</label>
+          <input id="loginInput" name="login" type="text" required />
+
+          <label for="senhaInput">Senha</label>
+          <input id="senhaInput" name="senha" type="password" required />
+
+          <button type="submit">Entrar</button>
+        </form>
+        <p id="loginMessage" class="message"></p>
+      </section>
+
+      <section id="appSection" class="hidden">
+        <div class="top-bar">
+          <p id="status" class="status">Conferindo conexao com o banco...</p>
+          <button id="logoutBtn" class="btn-secondary" type="button">
+            Sair
+          </button>
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Nome</th>
+                <th>Descricao</th>
+                <th>Data</th>
+                <th>Custo</th>
+                <th>Tipo</th>
+              </tr>
+            </thead>
+            <tbody id="receitasBody">
+              <tr>
+                <td colspan="6">Carregando dados...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
