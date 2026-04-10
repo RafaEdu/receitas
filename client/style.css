@@ -1,7 +1,9 @@
+/* Reset basico para consistencia visual. */
 * {
   box-sizing: border-box;
 }
 
+/* Estilo global da pagina. */
 body {
   margin: 0;
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
@@ -9,6 +11,7 @@ body {
   color: #202124;
 }
 
+/* Container principal com largura responsiva. */
 .container {
   width: min(960px, 92%);
   margin: 32px auto;
@@ -23,6 +26,7 @@ h1 {
   color: #4a5568;
 }
 
+/* Cartao usado no bloco de login. */
 .card {
   background: #ffffff;
   border: 1px solid #e5e7eb;
@@ -36,6 +40,7 @@ h1 {
   margin-bottom: 14px;
 }
 
+/* Formulario vertical com espacamento uniforme. */
 .form {
   display: flex;
   flex-direction: column;
@@ -54,6 +59,7 @@ input {
   font-size: 14px;
 }
 
+/* Botao primario padrao da interface. */
 button {
   margin-top: 8px;
   padding: 10px 12px;
@@ -68,6 +74,7 @@ button:hover {
   background: #1d4ed8;
 }
 
+/* Variante secundaria para o botao Sair. */
 .btn-secondary {
   margin-top: 0;
   background: #475569;
@@ -83,6 +90,7 @@ button:hover {
   color: #b91c1c;
 }
 
+/* Barra superior com status e acao de logout. */
 .top-bar {
   display: flex;
   justify-content: space-between;
@@ -95,6 +103,7 @@ button:hover {
   display: none;
 }
 
+/* Wrapper com scroll horizontal para tabelas em telas menores. */
 .table-wrapper {
   overflow-x: auto;
   background: #ffffff;
@@ -107,6 +116,7 @@ table {
   border-collapse: collapse;
 }
 
+/* Estilo de celulas e cabecalhos da tabela. */
 th,
 td {
   padding: 10px;

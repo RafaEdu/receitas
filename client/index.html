@@ -4,12 +4,14 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Receitas</title>
+    <!-- Folha de estilo da interface -->
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
     <main class="container">
       <h1>Lista de Receitas</h1>
 
+      <!-- Secao de autenticacao -->
       <section id="loginSection" class="card">
         <h2>Login</h2>
         <form id="loginForm" class="form">
@@ -24,7 +26,9 @@
         <p id="loginMessage" class="message"></p>
       </section>
 
+      <!-- Secao principal exibida apos autenticacao -->
       <section id="appSection" class="hidden">
+        <!-- Barra superior com status de conexao e logout -->
         <div class="top-bar">
           <p id="status" class="status">Conferindo conexao com o banco...</p>
           <button id="logoutBtn" class="btn-secondary" type="button">
@@ -32,6 +36,7 @@
           </button>
         </div>
 
+        <!-- Tabela de receitas carregada dinamicamente via app.js -->
         <div class="table-wrapper">
           <table>
             <thead>
@@ -54,6 +59,7 @@
       </section>
     </main>
 
+    <!-- Script principal da aplicacao cliente -->
     <script src="./app.js"></script>
   </body>
 </html>

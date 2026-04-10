@@ -1,3 +1,4 @@
+-- Tabela de receitas exibidas na aplicacao.
 CREATE TABLE receita (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(100),
@@ -7,6 +8,7 @@ CREATE TABLE receita (
     tipo_receita CHAR(1)
 );
 
+-- Tabela de usuarios usada para autenticacao.
 CREATE TABLE usuario (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(100),

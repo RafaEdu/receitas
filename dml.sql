@@ -1,5 +1,7 @@
+-- Usuario padrao para acesso inicial ao sistema.
 INSERT INTO usuario (nome, login, senha, situacao) VALUES ('Admin', 'admin', '1234', 'A');
 
+-- Dados de exemplo para popular a lista de receitas.
 INSERT INTO receita (nome, descricao, data_registro, custo, tipo_receita) VALUES ('Bolo de cenoura', 'Como fazer um bolo de cenoura sem cenoura', '2026-01-25', 40.00, 'D');
 INSERT INTO receita (nome, descricao, data_registro, custo, tipo_receita) VALUES ('Bolo de chocolate', 'Como fazer um bolo de chocolate', '2026-01-07', 50.00, 'D');
 INSERT INTO receita (nome, descricao, data_registro, custo, tipo_receita) VALUES ('Pão de queijo', 'Pão de queijo caseiro crocante', '2026-02-10', 15.00, 'S');
