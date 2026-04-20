@@ -72,6 +72,81 @@ async function getDateColumnName() {
   return column ? column.column_name : null;
 }
 
+// Cria erro de validacao padrao para retornar status 400 no fluxo das rotas.
+function createValidationError(message) {
+  const error = new Error(message);
+  error.statusCode = 400;
+  return error;
+}
+
+// Normaliza campo de texto opcional, remove espacos e valida tamanho maximo.
+function normalizeOptionalText(value, fieldName, maxLength) {
+  if (value === null || value === undefined) {
+    return null;
+  }
+
+  const normalizedValue = String(value).trim();
+  if (!normalizedValue) {
+    return null;
+  }
+
+  if (normalizedValue.length > maxLength) {
+    throw createValidationError(
+      `O campo ${fieldName} aceita no maximo ${maxLength} caracteres.`,
+    );
+  }
+
+  return normalizedValue;
+}
+
+// Normaliza custo opcional e garante que seja um numero valido maior ou igual a zero.
+function normalizeOptionalCost(value) {
+  if (value === null || value === undefined || String(value).trim() === "") {
+    return null;
+  }
+
+  const normalizedCost = Number(value);
+  if (Number.isNaN(normalizedCost)) {
+    throw createValidationError("O campo custo deve ser numerico.");
+  }
+
+  if (normalizedCost < 0) {
+    throw createValidationError("O campo custo nao pode ser negativo.");
+  }
+
+  return normalizedCost;
+}
+
+// Normaliza data opcional no formato YYYY-MM-DD para gravacao no banco.
+function normalizeOptionalDate(value) {
+  if (value === null || value === undefined || String(value).trim() === "") {
+    return null;
+  }
+
+  const normalizedDate = String(value).trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(normalizedDate)) {
+    throw createValidationError(
+      "O campo data deve estar no formato YYYY-MM-DD.",
+    );
+  }
+
+  return normalizedDate;
+}
+
+// Normaliza tipo opcional para letra maiuscula com apenas 1 caractere.
+function normalizeOptionalTipo(value) {
+  if (value === null || value === undefined || String(value).trim() === "") {
+    return null;
+  }
+
+  const normalizedTipo = String(value).trim().toUpperCase();
+  if (normalizedTipo.length !== 1) {
+    throw createValidationError("O campo tipo_receita deve ter 1 caractere.");
+  }
+
+  return normalizedTipo;
+}
+
 // Login: valida credenciais e cria sessao de usuario.
 app.post("/api/login", async (req, res) => {
   try {
@@ -198,6 +273,167 @@ app.get("/api/receitas", requireAuth, async (_req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Erro ao consultar receitas.",
+      error: error.message,
+    });
+  }
+});
+
+// Cria uma nova receita (rota protegida por sessao).
+app.post("/api/receitas", requireAuth, async (req, res) => {
+  try {
+    // Normaliza os campos da nova receita antes de persistir no banco.
+    const nome = normalizeOptionalText(req.body?.nome, "nome", 100);
+    const descricao = normalizeOptionalText(
+      req.body?.descricao,
+      "descricao",
+      255,
+    );
+    const dataRegistro = normalizeOptionalDate(req.body?.data_registro);
+    const custo = normalizeOptionalCost(req.body?.custo);
+    const tipoReceita = normalizeOptionalTipo(req.body?.tipo_receita);
+
+    // Resolve nome da coluna de data dinamicamente para manter compatibilidade.
+    const dateColumn = await getDateColumnName();
+    const columns = ["nome", "descricao", "custo", "tipo_receita"];
+    const values = [nome, descricao, custo, tipoReceita];
+
+    if (dateColumn) {
+      // Insere a data na mesma posicao logica da listagem quando a coluna existir.
+      columns.splice(2, 0, dateColumn);
+      values.splice(2, 0, dataRegistro);
+    }
+
+    const placeholders = values.map((_, index) => `$${index + 1}`).join(", ");
+    const query = `
+      INSERT INTO receita (${columns.join(", ")})
+      VALUES (${placeholders})
+      RETURNING id
+    `;
+
+    const result = await pool.query(query, values);
+
+    return res.status(201).json({
+      ok: true,
+      id: result.rows[0].id,
+      message: "Receita criada com sucesso.",
+    });
+  } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+
+    return res.status(500).json({
+      message: "Erro ao criar receita.",
+      error: error.message,
+    });
+  }
+});
+
+// Atualiza uma receita (rota protegida por sessao).
+app.put("/api/receitas/:id", requireAuth, async (req, res) => {
+  try {
+    const receitaId = Number(req.params.id);
+    if (!Number.isInteger(receitaId) || receitaId <= 0) {
+      throw createValidationError("ID da receita invalido.");
+    }
+
+    // Normaliza todos os campos que podem ser alterados no modo de edicao.
+    const nome = normalizeOptionalText(req.body?.nome, "nome", 100);
+    const descricao = normalizeOptionalText(
+      req.body?.descricao,
+      "descricao",
+      255,
+    );
+    const dataRegistro = normalizeOptionalDate(req.body?.data_registro);
+    const custo = normalizeOptionalCost(req.body?.custo);
+    const tipoReceita = normalizeOptionalTipo(req.body?.tipo_receita);
+
+    // Resolve nome da coluna de data dinamicamente para manter compatibilidade.
+    const dateColumn = await getDateColumnName();
+    const setParts = [];
+    const values = [];
+
+    setParts.push(`nome = $${values.push(nome)}`);
+    setParts.push(`descricao = $${values.push(descricao)}`);
+
+    if (dateColumn) {
+      setParts.push(`${dateColumn} = $${values.push(dataRegistro)}`);
+    }
+
+    setParts.push(`custo = $${values.push(custo)}`);
+    setParts.push(`tipo_receita = $${values.push(tipoReceita)}`);
+
+    const idParam = `$${values.push(receitaId)}`;
+    const query = `
+      UPDATE receita
+      SET ${setParts.join(", ")}
+      WHERE id = ${idParam}
+      RETURNING id
+    `;
+
+    const result = await pool.query(query, values);
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        message: "Receita nao encontrada.",
+      });
+    }
+
+    return res.json({
+      ok: true,
+      message: "Receita atualizada com sucesso.",
+    });
+  } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+
+    return res.status(500).json({
+      message: "Erro ao atualizar receita.",
+      error: error.message,
+    });
+  }
+});
+
+// Exclui uma receita (rota protegida por sessao).
+app.delete("/api/receitas/:id", requireAuth, async (req, res) => {
+  try {
+    const receitaId = Number(req.params.id);
+    if (!Number.isInteger(receitaId) || receitaId <= 0) {
+      throw createValidationError("ID da receita invalido.");
+    }
+
+    const result = await pool.query(
+      `
+        DELETE FROM receita
+        WHERE id = $1
+        RETURNING id
+      `,
+      [receitaId],
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({
+        message: "Receita nao encontrada.",
+      });
+    }
+
+    return res.json({
+      ok: true,
+      message: "Receita excluida com sucesso.",
+    });
+  } catch (error) {
+    if (error.statusCode) {
+      return res.status(error.statusCode).json({
+        message: error.message,
+      });
+    }
+
+    return res.status(500).json({
+      message: "Erro ao excluir receita.",
       error: error.message,
     });
   }

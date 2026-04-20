@@ -74,6 +74,15 @@ button:hover {
   background: #1d4ed8;
 }
 
+/* Variante compacta para botoes de acao dentro da tabela. */
+.btn-inline {
+  margin-top: 0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
 /* Variante secundaria para o botao Sair. */
 .btn-secondary {
   margin-top: 0;
@@ -82,6 +91,24 @@ button:hover {
 
 .btn-secondary:hover {
   background: #334155;
+}
+
+/* Variante usada para acao destrutiva de exclusao. */
+.btn-danger {
+  background: #dc2626;
+}
+
+.btn-danger:hover {
+  background: #b91c1c;
+}
+
+/* Variante neutra usada para cancelar edicao. */
+.btn-muted {
+  background: #6b7280;
+}
+
+.btn-muted:hover {
+  background: #4b5563;
 }
 
 .message {
@@ -111,6 +138,13 @@ button:hover {
   border-radius: 8px;
 }
 
+/* Rodape fixo visualmente colado ao fim da tabela para acao de insercao. */
+.table-footer {
+  padding: 8px 10px;
+  border-top: 1px solid #edf0f3;
+  background: #ffffff;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -119,13 +153,39 @@ table {
 /* Estilo de celulas e cabecalhos da tabela. */
 th,
 td {
-  padding: 10px;
+  padding: 8px 10px;
   border-bottom: 1px solid #edf0f3;
   text-align: left;
+  vertical-align: middle;
 }
 
 th {
   background: #f1f5f9;
+}
+
+/* Agrupa os botoes de cada linha sem quebra de layout. */
+.actions-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+/* Campo compacto para edicao inline dos dados da receita. */
+.inline-input {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  height: 28px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+/* Mantem a linha em edicao com altura proxima da listagem padrao. */
+.editing-row td {
+  padding-top: 6px;
+  padding-bottom: 6px;
 }
 
 tr:last-child td {
