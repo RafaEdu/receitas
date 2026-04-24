@@ -6,14 +6,36 @@ const statusEl = document.getElementById("status");
 const bodyEl = document.getElementById("receitasBody");
 const logoutBtnEl = document.getElementById("logoutBtn");
 const addReceitaBtnEl = document.getElementById("addReceitaBtn");
+const toggleFiltersBtnEl = document.getElementById("toggleFiltersBtn");
+const filtersRowEl = document.getElementById("filtersRow");
+const filterIdInputEl = document.getElementById("filterIdInput");
+const filterNomeInputEl = document.getElementById("filterNomeInput");
+const filterDescricaoInputEl = document.getElementById("filterDescricaoInput");
+const filterDataInputEl = document.getElementById("filterDataInput");
+const filterCustoInputEl = document.getElementById("filterCustoInput");
+const filterTipoSelectEl = document.getElementById("filterTipoSelect");
+const applyFiltersBtnEl = document.getElementById("applyFiltersBtn");
+const filterSummaryEl = document.getElementById("filterSummary");
+const COST_FILTER_DEFAULT_DISPLAY = "00,00";
 
 // Quantidade fixa de colunas da tabela (incluindo coluna de acoes).
 const TABLE_COLUMN_COUNT = 7;
+const DEFAULT_FILTERS = Object.freeze({
+  id: "",
+  nome: "",
+  descricao: "",
+  data_registro: "",
+  custo: "",
+  tipo_receita: "",
+});
 
 // Estado em memoria para renderizar tabela e controlar linha em edicao.
 let receitasCache = [];
 let editingReceitaId = null;
 let addingNewReceita = false;
+let filtersVisible = false;
+let appliedFilters = { ...DEFAULT_FILTERS };
+let filterCostDigits = "";
 
 // Exibe a tela de login e oculta a area principal.
 function showLogin(message = "") {
@@ -77,6 +99,203 @@ function formatMoney(value) {
     style: "currency",
     currency: "BRL",
   });
+}
+
+// Normaliza texto para comparacao de filtros sem diferenciar maiusculas/minusculas.
+function normalizeFilterText(value) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase();
+}
+
+// Converte entrada de custo para centavos (somente digitos): 4000 => 40,00.
+function normalizeCostFilterCents(value) {
+  return String(value ?? "")
+    .replace(/\D/g, "")
+    .trim();
+}
+
+// Formata texto de centavos para exibicao progressiva no input de custo.
+function formatCostFilterDisplay(centsText) {
+  const digits = normalizeCostFilterCents(centsText);
+  if (!digits) {
+    return COST_FILTER_DEFAULT_DISPLAY;
+  }
+
+  const padded = digits.padStart(3, "0");
+  const integerPart = padded.slice(0, -2).replace(/^0+(?=\d)/, "");
+  const decimalPart = padded.slice(-2);
+  return `${integerPart},${decimalPart}`;
+}
+
+// Atualiza estado interno de custo em centavos e refleti o valor mascarado no input.
+function setCostFilterDigits(rawValue) {
+  filterCostDigits = normalizeCostFilterCents(rawValue);
+
+  if (!filterCustoInputEl) {
+    return;
+  }
+
+  filterCustoInputEl.value = formatCostFilterDisplay(filterCostDigits);
+}
+
+// Mantem o cursor no final do input para reforcar digitacao progressiva.
+function moveCostInputCaretToEnd() {
+  if (!filterCustoInputEl) {
+    return;
+  }
+
+  const end = filterCustoInputEl.value.length;
+  filterCustoInputEl.setSelectionRange(end, end);
+}
+
+// Converte custo da receita para centavos inteiros para comparar com o filtro.
+function toCostInCents(value) {
+  const number = Number(value);
+  if (Number.isNaN(number)) {
+    return null;
+  }
+
+  return Math.round(number * 100);
+}
+
+// Indica se ha pelo menos um filtro aplicado na tabela.
+function hasActiveFilters() {
+  return Object.values(appliedFilters).some((value) => value !== "");
+}
+
+// Le os valores da linha de filtros para aplicar somente quando o usuario clicar na lupa.
+function readFilterValues() {
+  return {
+    id: normalizeFilterText(filterIdInputEl?.value),
+    nome: normalizeFilterText(filterNomeInputEl?.value),
+    descricao: normalizeFilterText(filterDescricaoInputEl?.value),
+    data_registro: String(filterDataInputEl?.value || ""),
+    custo: filterCostDigits,
+    tipo_receita: String(filterTipoSelectEl?.value || "")
+      .trim()
+      .toUpperCase(),
+  };
+}
+
+// Limpa os campos visuais da linha de filtros quando o painel e fechado.
+function clearFilterInputs() {
+  if (filterIdInputEl) filterIdInputEl.value = "";
+  if (filterNomeInputEl) filterNomeInputEl.value = "";
+  if (filterDescricaoInputEl) filterDescricaoInputEl.value = "";
+  if (filterDataInputEl) filterDataInputEl.value = "";
+  setCostFilterDigits("");
+  if (filterTipoSelectEl) filterTipoSelectEl.value = "";
+}
+
+// Filtra a lista local de receitas com base no conjunto de filtros aplicados.
+function filterReceitas(items) {
+  if (!hasActiveFilters()) {
+    return items;
+  }
+
+  return items.filter((item) => {
+    const idText = String(item.id ?? "");
+    const nomeText = normalizeFilterText(item.nome);
+    const descricaoText = normalizeFilterText(item.descricao);
+    const dataText = toDateInputValue(item.data_registro);
+    const custoInCents = toCostInCents(item.custo);
+    const tipoText = String(item.tipo_receita || "")
+      .trim()
+      .toUpperCase();
+
+    if (appliedFilters.id && !idText.includes(appliedFilters.id)) {
+      return false;
+    }
+
+    if (appliedFilters.nome && !nomeText.includes(appliedFilters.nome)) {
+      return false;
+    }
+
+    if (
+      appliedFilters.descricao &&
+      !descricaoText.includes(appliedFilters.descricao)
+    ) {
+      return false;
+    }
+
+    if (
+      appliedFilters.data_registro &&
+      dataText !== appliedFilters.data_registro
+    ) {
+      return false;
+    }
+
+    if (appliedFilters.custo) {
+      const filteredCents = Number(appliedFilters.custo);
+      if (
+        !Number.isInteger(filteredCents) ||
+        filteredCents < 0 ||
+        custoInCents !== filteredCents
+      ) {
+        return false;
+      }
+    }
+
+    if (
+      appliedFilters.tipo_receita &&
+      tipoText !== appliedFilters.tipo_receita
+    ) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+// Exibe feedback do resultado de consulta de filtros.
+function updateFilterSummary(foundCount, totalCount) {
+  if (!filterSummaryEl) {
+    return;
+  }
+
+  if (!hasActiveFilters()) {
+    filterSummaryEl.textContent = "";
+    filterSummaryEl.classList.add("hidden");
+    return;
+  }
+
+  const label =
+    foundCount === 1 ? "receita encontrada" : "receitas encontradas";
+  filterSummaryEl.textContent = `${foundCount} ${label} (de ${totalCount} registros).`;
+  filterSummaryEl.classList.remove("hidden");
+}
+
+// Aplica filtros sob demanda via botao de lupa ou tecla Enter.
+function applyFilters() {
+  editingReceitaId = null;
+  addingNewReceita = false;
+  appliedFilters = readFilterValues();
+  renderReceitas();
+  statusEl.textContent = hasActiveFilters()
+    ? "Filtros aplicados com sucesso."
+    : "Filtros limpos. Listagem completa exibida.";
+}
+
+// Exibe/oculta linha de filtros no cabecalho da tabela.
+function toggleFilters() {
+  if (!filtersRowEl || !toggleFiltersBtnEl) {
+    return;
+  }
+
+  filtersVisible = !filtersVisible;
+  filtersRowEl.classList.toggle("hidden", !filtersVisible);
+  toggleFiltersBtnEl.setAttribute("aria-expanded", String(filtersVisible));
+
+  if (!filtersVisible) {
+    appliedFilters = { ...DEFAULT_FILTERS };
+    clearFilterInputs();
+    renderReceitas();
+    statusEl.textContent = "Filtros ocultados. Listagem completa exibida.";
+    return;
+  }
+
+  filterIdInputEl?.focus();
 }
 
 // Faz requisicao de login ao backend.
@@ -259,8 +478,10 @@ function buildNewReceitaRow() {
 
 // Renderiza todas as linhas da tabela considerando o estado de edicao.
 function renderReceitas() {
+  const filteredReceitas = filterReceitas(receitasCache);
+
   // Monta linhas de leitura/edicao conforme estado atual da interface.
-  const rows = receitasCache.map((item) =>
+  const rows = filteredReceitas.map((item) =>
     Number(item.id) === editingReceitaId
       ? buildEditableRow(item)
       : buildReadOnlyRow(item),
@@ -272,12 +493,18 @@ function renderReceitas() {
 
   // Estado vazio: mantem feedback amigavel quando nao houver linhas para renderizar.
   if (rows.length === 0) {
-    renderTableMessage("Nenhuma receita encontrada.");
+    renderTableMessage(
+      hasActiveFilters()
+        ? "Nenhuma receita encontrada para os filtros informados."
+        : "Nenhuma receita encontrada.",
+    );
+    updateFilterSummary(0, receitasCache.length);
     return;
   }
 
   // Renderiza linhas dinamicamente com dados recebidos da API e linha de criacao.
   bodyEl.innerHTML = rows.join("");
+  updateFilterSummary(filteredReceitas.length, receitasCache.length);
 }
 
 // Coleta e valida os dados preenchidos na linha em modo de edicao.
@@ -442,6 +669,87 @@ addReceitaBtnEl.addEventListener("click", () => {
   renderReceitas();
 });
 
+// Alterna exibicao da linha de filtros na tabela.
+toggleFiltersBtnEl?.addEventListener("click", () => {
+  toggleFilters();
+});
+
+// Mascara de custo em tempo real: 4000 => 40,00.
+filterCustoInputEl?.addEventListener("keydown", (event) => {
+  if (event.ctrlKey || event.metaKey || event.altKey) {
+    return;
+  }
+
+  if (/^\d$/.test(event.key)) {
+    event.preventDefault();
+    setCostFilterDigits(filterCostDigits + event.key);
+    moveCostInputCaretToEnd();
+    return;
+  }
+
+  if (event.key === "Backspace") {
+    event.preventDefault();
+    setCostFilterDigits(filterCostDigits.slice(0, -1));
+    moveCostInputCaretToEnd();
+    return;
+  }
+
+  if (event.key === "Delete") {
+    event.preventDefault();
+    setCostFilterDigits("");
+    moveCostInputCaretToEnd();
+    return;
+  }
+
+  const allowedKeys = [
+    "Tab",
+    "Enter",
+    "ArrowLeft",
+    "ArrowRight",
+    "ArrowUp",
+    "ArrowDown",
+    "Home",
+    "End",
+  ];
+
+  if (!allowedKeys.includes(event.key)) {
+    event.preventDefault();
+  }
+});
+
+// Clique e foco mantem o cursor no fim para facilitar digitacao sequencial.
+filterCustoInputEl?.addEventListener("focus", () => {
+  moveCostInputCaretToEnd();
+});
+
+filterCustoInputEl?.addEventListener("click", (event) => {
+  event.preventDefault();
+  moveCostInputCaretToEnd();
+});
+
+// Permite colar numeros e aplica a mesma mascara automaticamente.
+filterCustoInputEl?.addEventListener("paste", (event) => {
+  event.preventDefault();
+  const pastedText = event.clipboardData?.getData("text") || "";
+  setCostFilterDigits(pastedText);
+  moveCostInputCaretToEnd();
+});
+
+// Aplica os filtros ao clicar na lupa.
+applyFiltersBtnEl?.addEventListener("click", () => {
+  applyFilters();
+});
+
+// Atalho: Enter em qualquer campo de filtro dispara a consulta.
+filtersRowEl?.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") {
+    return;
+  }
+
+  event.preventDefault();
+  applyFilters();
+});
+
 // Trata envio do formulario de login.
 loginFormEl.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -493,4 +801,5 @@ async function init() {
 }
 
 // Dispara o fluxo inicial ao abrir a pagina.
+setCostFilterDigits("");
 init();

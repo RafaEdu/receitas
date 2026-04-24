@@ -59,56 +59,77 @@ input {
   font-size: 14px;
 }
 
+select {
+  padding: 9px 10px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 14px;
+  background: #ffffff;
+}
+
 /* Botao primario padrao da interface. */
 button {
   margin-top: 8px;
   padding: 10px 12px;
-  border: 0;
+  border: 1px solid #000000;
   border-radius: 6px;
-  background: #2563eb;
+  background: #000000;
   color: #ffffff;
   cursor: pointer;
 }
 
 button:hover {
-  background: #1d4ed8;
+  background: #1a1a1a;
 }
 
 /* Variante compacta para botoes de acao dentro da tabela. */
 .btn-inline {
   margin-top: 0;
+  height: 28px;
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 12px;
   line-height: 1.2;
+  white-space: nowrap;
+}
+
+.btn-filter-toggle {
+  margin-left: 8px;
+  min-width: 70px;
+}
+
+.btn-filter-search {
+  min-width: 28px;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #000000;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-filter-search:hover {
+  background: transparent;
+  color: #000000;
+}
+
+.filter-search-icon {
+  display: block;
 }
 
 /* Variante secundaria para o botao Sair. */
 .btn-secondary {
   margin-top: 0;
-  background: #475569;
-}
-
-.btn-secondary:hover {
-  background: #334155;
 }
 
 /* Variante usada para acao destrutiva de exclusao. */
-.btn-danger {
-  background: #dc2626;
-}
-
-.btn-danger:hover {
-  background: #b91c1c;
-}
-
 /* Variante neutra usada para cancelar edicao. */
+.btn-danger,
 .btn-muted {
-  background: #6b7280;
-}
-
-.btn-muted:hover {
-  background: #4b5563;
+  background: #000000;
 }
 
 .message {
@@ -136,6 +157,7 @@ button:hover {
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
+  min-height: 460px;
 }
 
 /* Rodape fixo visualmente colado ao fim da tabela para acao de insercao. */
@@ -148,33 +170,113 @@ button:hover {
 table {
   width: 100%;
   border-collapse: collapse;
+  table-layout: fixed;
+}
+
+th:nth-child(1),
+td:nth-child(1) {
+  width: 8%;
+}
+
+th:nth-child(2),
+td:nth-child(2) {
+  width: 16%;
+}
+
+th:nth-child(3),
+td:nth-child(3) {
+  width: 22%;
+}
+
+th:nth-child(4),
+td:nth-child(4) {
+  width: 14%;
+}
+
+th:nth-child(5),
+td:nth-child(5) {
+  width: 14%;
+}
+
+th:nth-child(6),
+td:nth-child(6) {
+  width: 8%;
+}
+
+th:nth-child(7),
+td:nth-child(7) {
+  width: 20%;
 }
 
 /* Estilo de celulas e cabecalhos da tabela. */
 th,
 td {
   padding: 8px 10px;
+  height: 42px;
   border-bottom: 1px solid #edf0f3;
   text-align: left;
   vertical-align: middle;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 th {
   background: #f1f5f9;
 }
 
+.filters-row th {
+  background: #f8fafc;
+  padding-top: 6px;
+  padding-bottom: 6px;
+}
+
+.filters-row .actions-cell {
+  justify-content: flex-start;
+}
+
+.filter-summary {
+  margin: 0;
+  min-height: 36px;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: #1f2937;
+  border-top: 1px solid #edf0f3;
+  background: #f8fafc;
+}
+
+.filter-summary.hidden {
+  display: block;
+  visibility: hidden;
+}
+
 /* Agrupa os botoes de cada linha sem quebra de layout. */
 .actions-cell {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
   white-space: nowrap;
+  overflow: visible;
+  text-overflow: clip;
+}
+
+th:last-child {
+  overflow: visible;
+  text-overflow: clip;
+}
+
+.actions-cell .btn-inline {
+  min-width: 58px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Campo compacto para edicao inline dos dados da receita. */
 .inline-input {
   width: 100%;
   min-width: 0;
+  max-width: 100%;
+  display: block;
   margin: 0;
   height: 28px;
   padding: 3px 6px;
@@ -184,8 +286,14 @@ th {
 
 /* Mantem a linha em edicao com altura proxima da listagem padrao. */
 .editing-row td {
-  padding-top: 6px;
-  padding-bottom: 6px;
+  padding-top: 8px;
+  padding-bottom: 8px;
+}
+
+/* Evita quebra visual no grupo de acoes. */
+thead .actions-cell,
+tbody .actions-cell {
+  min-height: 28px;
 }
 
 tr:last-child td {
