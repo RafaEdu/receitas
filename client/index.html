@@ -122,8 +122,23 @@
                       viewBox="0 0 24 24"
                       aria-hidden="true"
                     >
-                      <circle cx="11" cy="11" r="6.5" fill="none" stroke="currentColor" stroke-width="2" />
-                      <line x1="16" y1="16" x2="21" y2="21" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                      <circle
+                        cx="11"
+                        cy="11"
+                        r="6.5"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                      />
+                      <line
+                        x1="16"
+                        y1="16"
+                        x2="21"
+                        y2="21"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                      />
                     </svg>
                   </button>
                 </th>
@@ -143,10 +158,16 @@
             <button id="addReceitaBtn" class="btn-inline" type="button">
               Adicionar nova receita
             </button>
+            <button id="exportPdfBtn" class="btn-inline" type="button">
+              Gerar Relatorio
+            </button>
           </div>
         </div>
       </section>
     </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
 
     <!-- Script principal da aplicacao cliente -->
     <script src="./app.js"></script>

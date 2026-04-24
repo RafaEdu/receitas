@@ -6,6 +6,7 @@ const statusEl = document.getElementById("status");
 const bodyEl = document.getElementById("receitasBody");
 const logoutBtnEl = document.getElementById("logoutBtn");
 const addReceitaBtnEl = document.getElementById("addReceitaBtn");
+const exportPdfBtnEl = document.getElementById("exportPdfBtn");
 const toggleFiltersBtnEl = document.getElementById("toggleFiltersBtn");
 const filtersRowEl = document.getElementById("filtersRow");
 const filterIdInputEl = document.getElementById("filterIdInput");
@@ -248,6 +249,132 @@ function filterReceitas(items) {
   });
 }
 
+// Retorna a lista visivel na tabela considerando os filtros ja aplicados.
+function getVisibleReceitas() {
+  return filterReceitas(receitasCache);
+}
+
+// Monta descricao textual dos filtros ativos para incluir no cabecalho do PDF.
+function getAppliedFiltersSummary() {
+  if (!hasActiveFilters()) {
+    return "Sem filtros";
+  }
+
+  const labels = [];
+
+  if (appliedFilters.id) {
+    labels.push(`ID contem \"${appliedFilters.id}\"`);
+  }
+
+  if (appliedFilters.nome) {
+    labels.push(`Nome contem \"${appliedFilters.nome}\"`);
+  }
+
+  if (appliedFilters.descricao) {
+    labels.push(`Descricao contem \"${appliedFilters.descricao}\"`);
+  }
+
+  if (appliedFilters.data_registro) {
+    labels.push(`Data igual a ${appliedFilters.data_registro}`);
+  }
+
+  if (appliedFilters.custo) {
+    const costNumber = Number(appliedFilters.custo) / 100;
+    labels.push(`Custo igual a ${formatMoney(costNumber)}`);
+  }
+
+  if (appliedFilters.tipo_receita) {
+    labels.push(`Tipo igual a ${appliedFilters.tipo_receita}`);
+  }
+
+  return labels.join(" | ");
+}
+
+// Exporta a tabela exibida para PDF com cabecalho e linhas filtradas.
+function exportReceitasPdf() {
+  const visibleReceitas = getVisibleReceitas();
+
+  if (visibleReceitas.length === 0) {
+    statusEl.textContent = "Nao ha receitas para exportar no momento.";
+    return;
+  }
+
+  const jsPdfNamespace = window.jspdf;
+  const JsPdfClass = jsPdfNamespace?.jsPDF;
+  if (typeof JsPdfClass !== "function") {
+    statusEl.textContent =
+      "Biblioteca de PDF indisponivel. Recarregue a pagina e tente novamente.";
+    return;
+  }
+
+  const doc = new JsPdfClass({
+    orientation: "landscape",
+    unit: "pt",
+    format: "a4",
+  });
+
+  if (typeof doc.autoTable !== "function") {
+    statusEl.textContent =
+      "Plugin de tabela para PDF indisponivel. Recarregue a pagina e tente novamente.";
+    return;
+  }
+
+  const generatedAt = new Date().toLocaleString("pt-BR");
+  const filtersSummary = getAppliedFiltersSummary();
+
+  doc.setFontSize(16);
+  doc.text("Relatorio de Receitas", 40, 40);
+
+  doc.setFontSize(10);
+  doc.text(`Gerado em: ${generatedAt}`, 40, 60);
+  doc.text(`Filtros: ${filtersSummary}`, 40, 76, { maxWidth: 760 });
+
+  const tableHead = [["ID", "Nome", "Descricao", "Data", "Custo", "Tipo"]];
+  const tableBody = visibleReceitas.map((item) => [
+    String(item.id ?? "-"),
+    String(item.nome || "-"),
+    String(item.descricao || "-"),
+    formatDate(item.data_registro),
+    formatMoney(item.custo),
+    String(item.tipo_receita || "-"),
+  ]);
+
+  doc.autoTable({
+    startY: 92,
+    head: tableHead,
+    body: tableBody,
+    styles: {
+      fontSize: 9,
+      cellPadding: 5,
+      textColor: [32, 33, 36],
+    },
+    headStyles: {
+      fillColor: [241, 245, 249],
+      textColor: [32, 33, 36],
+      lineColor: [229, 231, 235],
+      lineWidth: 0.5,
+      fontStyle: "bold",
+    },
+    bodyStyles: {
+      lineColor: [237, 240, 243],
+      lineWidth: 0.5,
+    },
+    columnStyles: {
+      0: { cellWidth: 45 },
+      1: { cellWidth: 130 },
+      2: { cellWidth: 240 },
+      3: { cellWidth: 85 },
+      4: { cellWidth: 95 },
+      5: { cellWidth: 60 },
+    },
+  });
+
+  const timestamp = new Date().toISOString().slice(0, 10).replaceAll("-", "");
+  const filterSuffix = hasActiveFilters() ? "_filtrado" : "_completo";
+  doc.save(`relatorio_receitas${filterSuffix}_${timestamp}.pdf`);
+  statusEl.textContent = "Relatorio PDF gerado com sucesso.";
+}
+
 // Exibe feedback do resultado de consulta de filtros.
 function updateFilterSummary(foundCount, totalCount) {
   if (!filterSummaryEl) {
@@ -478,7 +605,7 @@ function buildNewReceitaRow() {
 
 // Renderiza todas as linhas da tabela considerando o estado de edicao.
 function renderReceitas() {
-  const filteredReceitas = filterReceitas(receitasCache);
+  const filteredReceitas = getVisibleReceitas();
 
   // Monta linhas de leitura/edicao conforme estado atual da interface.
   const rows = filteredReceitas.map((item) =>
@@ -667,6 +794,11 @@ addReceitaBtnEl.addEventListener("click", () => {
   editingReceitaId = null;
   addingNewReceita = true;
   renderReceitas();
+});
+
+// Exporta o relatorio da tabela com os filtros atualmente aplicados.
+exportPdfBtnEl?.addEventListener("click", () => {
+  exportReceitasPdf();
 });
 
 // Alterna exibicao da linha de filtros na tabela.
