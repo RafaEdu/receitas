@@ -466,6 +466,8 @@ async function createReceita(payload) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || "Erro ao criar receita.");
   }
+
+  return response.json().catch(() => ({}));
 }
 
 // Atualiza uma receita especifica usando os dados editados da linha.
@@ -486,6 +488,17 @@ async function updateReceita(id, payload) {
     const errorData = await response.json().catch(() => ({}));
     throw new Error(errorData.message || "Erro ao atualizar receita.");
   }
+
+  return response.json().catch(() => ({}));
+}
+
+// Monta o texto de status incluindo aviso opcional retornado pela API.
+function formatStatusWithWarning(baseMessage, warning) {
+  if (!warning) {
+    return baseMessage;
+  }
+
+  return `${baseMessage} Aviso: ${warning}`;
 }
 
 // Remove uma receita da base de dados.
@@ -702,10 +715,13 @@ bodyEl.addEventListener("click", async (event) => {
       }
 
       const payload = readRowEditionData(rowEl);
-      await createReceita(payload);
+      const result = await createReceita(payload);
       addingNewReceita = false;
       await loadReceitas();
-      statusEl.textContent = "Receita criada com sucesso.";
+      statusEl.textContent = formatStatusWithWarning(
+        result?.message || "Receita criada com sucesso.",
+        result?.warning,
+      );
     } catch (error) {
       if (error.message === "UNAUTHORIZED") {
         showLogin("Faca login para acessar os dados.");
@@ -751,11 +767,14 @@ bodyEl.addEventListener("click", async (event) => {
       }
 
       const payload = readRowEditionData(rowEl);
-      await updateReceita(receitaId, payload);
+      const result = await updateReceita(receitaId, payload);
       editingReceitaId = null;
       addingNewReceita = false;
       await loadReceitas();
-      statusEl.textContent = "Receita atualizada com sucesso.";
+      statusEl.textContent = formatStatusWithWarning(
+        result?.message || "Receita atualizada com sucesso.",
+        result?.warning,
+      );
       return;
     }
 

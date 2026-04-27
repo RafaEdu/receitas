@@ -85,6 +85,50 @@ Sem login, os endpoints protegidos retornam `401`.
 - `GET /api/health`
 - `GET /api/receitas`
 
+## 8. Notificacao por e-mail
+
+Sempre que uma receita for criada (`POST /api/receitas`) ou editada (`PUT /api/receitas/:id`), o backend envia automaticamente um e-mail de notificacao.
+
+Se o envio do e-mail falhar, a criacao/edicao da receita continua normalmente e a API retorna um aviso no campo `warning` da resposta.
+
+### Configuracao
+
+Preencha no `.env` (ou em variaveis de ambiente do servidor):
+
+- `RECEITAS_NOTIFICATION_TO` (destinatario fixo da notificacao)
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_SECURE`
+- `SMTP_USER`
+- `SMTP_PASSWORD`
+- `SMTP_FROM`
+
+Recomendacao de seguranca para GitHub:
+
+- Mantenha `SMTP_PASSWORD` vazio no `.env` versionado.
+- Crie um arquivo `.env.local` (ignorado pelo Git) com:
+
+```dotenv
+SMTP_PASSWORD=sua_senha_de_app
+```
+
+O backend carrega `.env` e depois `.env.local` com prioridade para os valores locais.
+
+Exemplo para Gmail (SMTP SSL):
+
+- `SMTP_HOST=smtp.gmail.com`
+- `SMTP_PORT=465`
+- `SMTP_SECURE=true`
+- `SMTP_USER=rafael.dreissig@universo.univates.br`
+- `SMTP_FROM=rafael.dreissig@universo.univates.br`
+- `SMTP_PASSWORD=<senha de app do Google>`
+
+### Seguranca do destinatario
+
+- O endereco de destino fica apenas no backend (variavel de ambiente).
+- O frontend nao recebe nem exibe esse endereco.
+- As respostas da API nao retornam o e-mail de destino.
+
 Tempo para cada etapa:
 
 - Desenvolvimento da aplicação: 1 hora 10 minutos;

@@ -1,10 +1,16 @@
 const path = require("path");
 const express = require("express");
 const session = require("express-session");
+const nodemailer = require("nodemailer");
 const { Pool } = require("pg");
 
 // Carrega variaveis de ambiente do arquivo .env para process.env.
 require("dotenv").config();
+// Carrega variaveis locais nao versionadas com prioridade sobre .env.
+require("dotenv").config({
+  path: path.join(__dirname, "..", ".env.local"),
+  override: true,
+});
 
 const app = express();
 const port = Number(process.env.PORT) || 3000;
@@ -19,6 +25,48 @@ const pool = new Pool({
   user: process.env.DB_USER,
   password: process.env.DB_PASSWORD,
 });
+
+const notificationRecipient =
+  process.env.RECEITAS_NOTIFICATION_TO ||
+  "rafael.dreissig@universo.univates.br";
+const smtpHost = process.env.SMTP_HOST;
+const smtpPort = Number(process.env.SMTP_PORT) || 587;
+const smtpSecure =
+  String(process.env.SMTP_SECURE || "false").toLowerCase() === "true";
+const smtpUser = process.env.SMTP_USER;
+const smtpPassword = String(process.env.SMTP_PASSWORD || "").replace(
+  /\s+/g,
+  "",
+);
+const smtpFrom = process.env.SMTP_FROM;
+
+const missingEmailConfig = [
+  ["RECEITAS_NOTIFICATION_TO", notificationRecipient],
+  ["SMTP_HOST", smtpHost],
+  ["SMTP_USER", smtpUser],
+  ["SMTP_PASSWORD", smtpPassword],
+  ["SMTP_FROM", smtpFrom],
+].filter(([, value]) => !value);
+
+if (missingEmailConfig.length > 0) {
+  const missingVars = missingEmailConfig.map(([name]) => name).join(", ");
+  console.warn(
+    `Notificacao por e-mail indisponivel. Configure as variaveis: ${missingVars}.`,
+  );
+}
+
+const emailTransporter =
+  missingEmailConfig.length === 0
+    ? nodemailer.createTransport({
+        host: smtpHost,
+        port: smtpPort,
+        secure: smtpSecure,
+        auth: {
+          user: smtpUser,
+          pass: smtpPassword,
+        },
+      })
+    : null;
 
 // Habilita leitura de JSON no corpo das requisicoes.
 app.use(express.json());
@@ -55,8 +103,8 @@ function requireAuth(req, res, next) {
 
 // Detecta o nome correto da coluna de data na tabela receita.
 // O projeto aceita tanto data_registro (correto) quanto data_regisrtro (typo).
-async function getDateColumnName() {
-  const result = await pool.query(
+async function getDateColumnName(queryRunner = pool) {
+  const result = await queryRunner.query(
     `
 			SELECT column_name
 			FROM information_schema.columns
@@ -78,6 +126,9 @@ function createValidationError(message) {
   error.statusCode = 400;
   return error;
 }
+
+const EMAIL_WARNING_MESSAGE =
+  "Receita salva, mas o e-mail de notificacao nao foi enviado.";
 
 // Normaliza campo de texto opcional, remove espacos e valida tamanho maximo.
 function normalizeOptionalText(value, fieldName, maxLength) {
@@ -145,6 +196,55 @@ function normalizeOptionalTipo(value) {
   }
 
   return normalizedTipo;
+}
+
+// Converte valor para texto de e-mail com fallback padrao para campos vazios.
+function formatNotificationField(value) {
+  if (value === null || value === undefined || value === "") {
+    return "(vazio)";
+  }
+
+  return String(value);
+}
+
+// Envia e-mail de auditoria ao criar/editar receita sem expor destinatario na API.
+async function sendReceitaNotification({ action, receitaId, payload, user }) {
+  if (!emailTransporter || !notificationRecipient) {
+    return EMAIL_WARNING_MESSAGE;
+  }
+
+  const actionLabel = action === "create" ? "CRIADA" : "EDITADA";
+  const actor = user?.login || user?.nome || "usuario-desconhecido";
+  const subject = `[Receitas] Receita ${actionLabel}: #${receitaId}`;
+  const text = [
+    `Uma receita foi ${actionLabel.toLowerCase()} no sistema.`,
+    "",
+    `ID: ${receitaId}`,
+    `Usuario: ${actor}`,
+    `Nome: ${formatNotificationField(payload.nome)}`,
+    `Descricao: ${formatNotificationField(payload.descricao)}`,
+    `Data de registro: ${formatNotificationField(payload.data_registro)}`,
+    `Custo: ${formatNotificationField(payload.custo)}`,
+    `Tipo: ${formatNotificationField(payload.tipo_receita)}`,
+    `Data/hora do evento: ${new Date().toISOString()}`,
+  ].join("\n");
+
+  try {
+    await emailTransporter.sendMail({
+      from: smtpFrom,
+      to: notificationRecipient,
+      subject,
+      text,
+    });
+    return null;
+  } catch (error) {
+    // Log minimo para diagnostico sem risco de expor destinatario nas respostas.
+    console.error("Falha no envio de notificacao por e-mail.", {
+      name: error?.name,
+      code: error?.code,
+    });
+    return EMAIL_WARNING_MESSAGE;
+  }
 }
 
 // Login: valida credenciais e cria sessao de usuario.
@@ -280,7 +380,14 @@ app.get("/api/receitas", requireAuth, async (_req, res) => {
 
 // Cria uma nova receita (rota protegida por sessao).
 app.post("/api/receitas", requireAuth, async (req, res) => {
+  let dbClient;
+  let transactionOpen = false;
+
   try {
+    dbClient = await pool.connect();
+    await dbClient.query("BEGIN");
+    transactionOpen = true;
+
     // Normaliza os campos da nova receita antes de persistir no banco.
     const nome = normalizeOptionalText(req.body?.nome, "nome", 100);
     const descricao = normalizeOptionalText(
@@ -293,7 +400,7 @@ app.post("/api/receitas", requireAuth, async (req, res) => {
     const tipoReceita = normalizeOptionalTipo(req.body?.tipo_receita);
 
     // Resolve nome da coluna de data dinamicamente para manter compatibilidade.
-    const dateColumn = await getDateColumnName();
+    const dateColumn = await getDateColumnName(dbClient);
     const columns = ["nome", "descricao", "custo", "tipo_receita"];
     const values = [nome, descricao, custo, tipoReceita];
 
@@ -310,14 +417,43 @@ app.post("/api/receitas", requireAuth, async (req, res) => {
       RETURNING id
     `;
 
-    const result = await pool.query(query, values);
+    const result = await dbClient.query(query, values);
+    const receitaId = result.rows[0].id;
+
+    await dbClient.query("COMMIT");
+    transactionOpen = false;
+
+    const warning = await sendReceitaNotification({
+      action: "create",
+      receitaId,
+      payload: {
+        nome,
+        descricao,
+        data_registro: dataRegistro,
+        custo,
+        tipo_receita: tipoReceita,
+      },
+      user: req.session?.user,
+    });
+
+    const responseBody = {
+      ok: true,
+      id: receitaId,
+      message: "Receita criada com sucesso.",
+    };
+
+    if (warning) {
+      responseBody.warning = warning;
+    }
 
     return res.status(201).json({
-      ok: true,
-      id: result.rows[0].id,
-      message: "Receita criada com sucesso.",
+      ...responseBody,
     });
   } catch (error) {
+    if (dbClient && transactionOpen) {
+      await dbClient.query("ROLLBACK").catch(() => {});
+    }
+
     if (error.statusCode) {
       return res.status(error.statusCode).json({
         message: error.message,
@@ -326,14 +462,24 @@ app.post("/api/receitas", requireAuth, async (req, res) => {
 
     return res.status(500).json({
       message: "Erro ao criar receita.",
-      error: error.message,
     });
+  } finally {
+    if (dbClient) {
+      dbClient.release();
+    }
   }
 });
 
 // Atualiza uma receita (rota protegida por sessao).
 app.put("/api/receitas/:id", requireAuth, async (req, res) => {
+  let dbClient;
+  let transactionOpen = false;
+
   try {
+    dbClient = await pool.connect();
+    await dbClient.query("BEGIN");
+    transactionOpen = true;
+
     const receitaId = Number(req.params.id);
     if (!Number.isInteger(receitaId) || receitaId <= 0) {
       throw createValidationError("ID da receita invalido.");
@@ -351,7 +497,7 @@ app.put("/api/receitas/:id", requireAuth, async (req, res) => {
     const tipoReceita = normalizeOptionalTipo(req.body?.tipo_receita);
 
     // Resolve nome da coluna de data dinamicamente para manter compatibilidade.
-    const dateColumn = await getDateColumnName();
+    const dateColumn = await getDateColumnName(dbClient);
     const setParts = [];
     const values = [];
 
@@ -373,18 +519,49 @@ app.put("/api/receitas/:id", requireAuth, async (req, res) => {
       RETURNING id
     `;
 
-    const result = await pool.query(query, values);
+    const result = await dbClient.query(query, values);
     if (result.rowCount === 0) {
+      await dbClient.query("ROLLBACK");
+      transactionOpen = false;
+
       return res.status(404).json({
         message: "Receita nao encontrada.",
       });
     }
 
-    return res.json({
+    await dbClient.query("COMMIT");
+    transactionOpen = false;
+
+    const warning = await sendReceitaNotification({
+      action: "update",
+      receitaId,
+      payload: {
+        nome,
+        descricao,
+        data_registro: dataRegistro,
+        custo,
+        tipo_receita: tipoReceita,
+      },
+      user: req.session?.user,
+    });
+
+    const responseBody = {
       ok: true,
       message: "Receita atualizada com sucesso.",
+    };
+
+    if (warning) {
+      responseBody.warning = warning;
+    }
+
+    return res.json({
+      ...responseBody,
     });
   } catch (error) {
+    if (dbClient && transactionOpen) {
+      await dbClient.query("ROLLBACK").catch(() => {});
+    }
+
     if (error.statusCode) {
       return res.status(error.statusCode).json({
         message: error.message,
@@ -393,8 +570,11 @@ app.put("/api/receitas/:id", requireAuth, async (req, res) => {
 
     return res.status(500).json({
       message: "Erro ao atualizar receita.",
-      error: error.message,
     });
+  } finally {
+    if (dbClient) {
+      dbClient.release();
+    }
   }
 });
 
