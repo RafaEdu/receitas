@@ -625,6 +625,27 @@ app.get("/", (_req, res) => {
 });
 
 // Inicializa o servidor HTTP na porta configurada.
-app.listen(port, () => {
-  console.log(`Servidor rodando em http://localhost:${port}`);
-});
+function startServer() {
+  return app.listen(port, () => {
+    console.log(`Servidor rodando em http://localhost:${port}`);
+  });
+}
+
+if (require.main === module) {
+  startServer();
+}
+
+module.exports = {
+  app,
+  pool,
+  EMAIL_WARNING_MESSAGE,
+  requireAuth,
+  getDateColumnName,
+  normalizeOptionalText,
+  normalizeOptionalCost,
+  normalizeOptionalDate,
+  normalizeOptionalTipo,
+  formatNotificationField,
+  sendReceitaNotification,
+  startServer,
+};
