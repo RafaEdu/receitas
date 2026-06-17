@@ -1,22 +1,30 @@
 #!/bin/bash
 
-echo "=== Iniciando recuperação do ambiente ==="
+echo "=== Verificando a versão do Docker Compose instalada na VM ==="
+if sudo docker compose version >/dev/null 2>&1; then
+    COMPOSE_CMD="sudo docker compose"
+elif sudo docker-compose version >/dev/null 2>&1; then
+    COMPOSE_CMD="sudo docker-compose"
+else
+    echo "Erro crítico: Docker Compose não foi detectado nesta VM."
+    exit 1
+fi
 
-# 1. Limpa pastas antigas se existirem para evitar conflitos
+echo "Comando detectado e selecionado: $COMPOSE_CMD"
+echo "=== Limpando resquícios antigos ==="
 rm -rf receitas-projeto
 
-# 2. Clona o repositório onde estão todos os arquivos configurados acima
+echo "=== Clonando o repositório do GitHub ==="
+# Substitua a URL abaixo pela URL real do seu repositório privado ou público
 git clone https://github.com/RafaEdu/receitas.git receitas-projeto
 
-# 3. Entra na pasta do projeto
 cd receitas-projeto
 
-# 4. Inicia a subida da infraestrutura básica (Jenkins e Bancos de Dados)
-echo "=== Subindo Containers via Docker Compose ==="
-sudo docker compose up -d jenkins db-integration db-homolog db-prod
+echo "=== Subindo a Infraestrutura Base (Bancos e Jenkins) ==="
+$COMPOSE_CMD up -d jenkins db-integration db-homolog db-prod
 
 echo "=========================================================="
-echo " Tudo pronto! Acesse o Jenkins em: http://177.44.248.43:8080"
+echo " Sucesso! Acesse o seu Jenkins em: http://177.44.248.43:8080"
 echo " Usuário: admin"
 echo " Senha: univates123"
 echo "=========================================================="

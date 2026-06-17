@@ -5,7 +5,6 @@ networks:
     driver: bridge
 
 services:
-  # Orquestrador do Pipeline
   jenkins:
     build:
       context: .
@@ -21,7 +20,7 @@ services:
     networks:
       - receitas-network
 
-  # --- AMBIENTE DE INTEGRAÇÃO (Porta 3002) ---
+  # --- INTEGRAÇÃO (Porta 3002) ---
   db-integration:
     image: postgres:15-alpine
     environment:
@@ -48,7 +47,7 @@ services:
     networks:
       - receitas-network
 
-  # --- AMBIENTE DE HOMOLOGAÇÃO (Porta 3001) ---
+  # --- HOMOLOGAÇÃO (Porta 3001) ---
   db-homolog:
     image: postgres:15-alpine
     environment:
@@ -75,7 +74,7 @@ services:
     networks:
       - receitas-network
 
-  # --- AMBIENTE DE PRODUÇÃO (Porta 3000) ---
+  # --- PRODUÇÃO (Porta 3000) ---
   db-prod:
     image: postgres:15-alpine
     environment:
