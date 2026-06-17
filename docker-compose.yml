@@ -1,0 +1,106 @@
+version: "3.8"
+
+networks:
+  receitas-network:
+    driver: bridge
+
+services:
+  # Orquestrador do Pipeline
+  jenkins:
+    build:
+      context: .
+      dockerfile: Dockerfile.jenkins
+    ports:
+      - "8080:8080"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - jenkins_data:/var/jenkins_home
+      - ./jenkins-init.groovy:/usr/share/jenkins/ref/init.groovy.d/exec-init.groovy
+    environment:
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
+    networks:
+      - receitas-network
+
+  # --- AMBIENTE DE INTEGRAÇÃO (Porta 3002) ---
+  db-integration:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: receitas
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ./ddl.sql:/docker-entrypoint-initdb.d/ddl.sql
+    networks:
+      - receitas-network
+
+  app-integration:
+    build: .
+    ports:
+      - "3002:3000"
+    environment:
+      - DB_HOST=db-integration
+      - DB_NAME=receitas
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - PORT=3000
+    depends_on:
+      - db-integration
+    networks:
+      - receitas-network
+
+  # --- AMBIENTE DE HOMOLOGAÇÃO (Porta 3001) ---
+  db-homolog:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: receitas
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ./ddl.sql:/docker-entrypoint-initdb.d/ddl.sql
+    networks:
+      - receitas-network
+
+  app-homolog:
+    build: .
+    ports:
+      - "3001:3000"
+    environment:
+      - DB_HOST=db-homolog
+      - DB_NAME=receitas
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - PORT=3000
+    depends_on:
+      - db-homolog
+    networks:
+      - receitas-network
+
+  # --- AMBIENTE DE PRODUÇÃO (Porta 3000) ---
+  db-prod:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: receitas
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - ./ddl.sql:/docker-entrypoint-initdb.d/ddl.sql
+    networks:
+      - receitas-network
+
+  app-prod:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - DB_HOST=db-prod
+      - DB_NAME=receitas
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - PORT=3000
+    depends_on:
+      - db-prod
+    networks:
+      - receitas-network
+
+volumes:
+  jenkins_data:

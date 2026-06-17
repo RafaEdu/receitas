@@ -1,0 +1,8 @@
+FROM jenkins/jenkins:lts
+
+USER root
+# Instala o cliente do Docker dentro do container do Jenkins
+RUN apt-get update && apt-get install -y curl && \
+    curl -fsSL https://get.docker.com | sh
+
+USER jenkins
