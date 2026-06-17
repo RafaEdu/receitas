@@ -16,8 +16,7 @@ $COMPOSE_CMD down --remove-orphans
 rm -rf receitas-projeto
 
 echo "=== Clonando o repositório do GitHub ==="
-# !!! LEMBRE-SE DE ALTERAR PARA A URL REAL DO SEU REPOSITÓRIO ABAIXO !!!
-git clone https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git receitas-projeto
+git clone https://github.com/RafaEdu/receitas.git receitas-projeto
 
 cd receitas-projeto
 
