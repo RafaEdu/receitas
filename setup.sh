@@ -12,19 +12,26 @@ fi
 
 echo "Comando detectado e selecionado: $COMPOSE_CMD"
 echo "=== Limpando resquícios antigos ==="
+$COMPOSE_CMD down --remove-orphans
 rm -rf receitas-projeto
 
 echo "=== Clonando o repositório do GitHub ==="
-# Substitua a URL abaixo pela URL real do seu repositório privado ou público
-git clone https://github.com/RafaEdu/receitas.git receitas-projeto
+# !!! LEMBRE-SE DE ALTERAR PARA A URL REAL DO SEU REPOSITÓRIO ABAIXO !!!
+git clone https://github.com/SEU_USUARIO/SEU_REPOSITORIO.git receitas-projeto
 
 cd receitas-projeto
 
-echo "=== Subindo a Infraestrutura Base (Bancos e Jenkins) ==="
-$COMPOSE_CMD up -d jenkins db-integration db-homolog db-prod
+echo "=== Ajustando permissões do Socket do Docker para o Jenkins ==="
+# Isso evita o erro de "Permissão Negada" quando o Jenkins tentar criar os containers de Node
+sudo chmod 666 /var/run/docker.sock
+
+echo "=== Subindo a Infraestrutura Base (Bancos e Jenkins com Plugins) ==="
+# Adicionamos o --build para forçar o Jenkins a reconstruir instalando os novos plugins
+$COMPOSE_CMD up -d --build jenkins db-integration db-homolog db-prod
 
 echo "=========================================================="
-echo " Sucesso! Acesse o seu Jenkins em: http://177.44.248.43:8080"
+echo " Sucesso! Aguarde 1 minuto para o Jenkins iniciar com os plugins."
+echo " Acesse em: http://177.44.248.43:8080"
 echo " Usuário: admin"
 echo " Senha: univates123"
 echo "=========================================================="
