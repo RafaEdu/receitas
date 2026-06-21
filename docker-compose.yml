@@ -1,4 +1,4 @@
-version: "3.8"
+name: receitas
 
 networks:
   receitas-network:
@@ -28,7 +28,14 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
-      - ./ddl.sql:/docker-entrypoint-initdb.d/ddl.sql
+      - ./ddl.sql:/docker-entrypoint-initdb.d/01-ddl.sql
+      - ./dml.sql:/docker-entrypoint-initdb.d/02-dml.sql
+      - db_integration_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d receitas"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - receitas-network
 
@@ -43,7 +50,8 @@ services:
       - DB_PASSWORD=postgres
       - PORT=3000
     depends_on:
-      - db-integration
+      db-integration:
+        condition: service_healthy
     networks:
       - receitas-network
 
@@ -55,7 +63,14 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
-      - ./ddl.sql:/docker-entrypoint-initdb.d/ddl.sql
+      - ./ddl.sql:/docker-entrypoint-initdb.d/01-ddl.sql
+      - ./dml.sql:/docker-entrypoint-initdb.d/02-dml.sql
+      - db_homolog_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d receitas"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - receitas-network
 
@@ -70,7 +85,8 @@ services:
       - DB_PASSWORD=postgres
       - PORT=3000
     depends_on:
-      - db-homolog
+      db-homolog:
+        condition: service_healthy
     networks:
       - receitas-network
 
@@ -82,7 +98,14 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
-      - ./ddl.sql:/docker-entrypoint-initdb.d/ddl.sql
+      - ./ddl.sql:/docker-entrypoint-initdb.d/01-ddl.sql
+      - ./dml.sql:/docker-entrypoint-initdb.d/02-dml.sql
+      - db_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d receitas"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - receitas-network
 
@@ -97,9 +120,13 @@ services:
       - DB_PASSWORD=postgres
       - PORT=3000
     depends_on:
-      - db-prod
+      db-prod:
+        condition: service_healthy
     networks:
       - receitas-network
 
 volumes:
   jenkins_data:
+  db_integration_data:
+  db_homolog_data:
+  db_prod_data:

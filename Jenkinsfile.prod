@@ -1,0 +1,19 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Aprovação') {
+            steps {
+                input message: 'Homologação validada em http://177.44.248.43:3001. Enviar para PRODUÇÃO?', ok: 'Aprovar'
+            }
+        }
+
+        stage('Deploy em Produção') {
+            steps {
+                echo 'Publicando em Produção na porta 3000...'
+                sh 'docker compose build app-prod'
+                sh 'docker compose up -d app-prod'
+            }
+        }
+    }
+}
