@@ -2,8 +2,6 @@
   "name": "receitas",
   "version": "1.0.0",
   "private": true,
-  "description": "Lista simples de receitas com Node, Express e Postgres",
-  "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
     "migrate": "node server/migrate.js",
