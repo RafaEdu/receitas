@@ -26,7 +26,7 @@ sudo chmod 666 /var/run/docker.sock
 
 echo "=== Subindo a Infraestrutura Base (Bancos e Jenkins com Plugins) ==="
 # Adicionamos o --build para forçar o Jenkins a reconstruir instalando os novos plugins
-$COMPOSE_CMD up -d --build jenkins db-integration db-homolog db-prod
+$COMPOSE_CMD up -d --build jenkins db-homolog db-prod
 
 echo "=== Aguardando os bancos ficarem saudáveis ==="
 sleep 5
