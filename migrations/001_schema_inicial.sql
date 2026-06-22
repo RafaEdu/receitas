@@ -1,5 +1,7 @@
--- Tabela de receitas exibidas na aplicacao.
-CREATE TABLE receita (
+-- Migration 001: Schema inicial do projeto Receitas
+-- Cria as tabelas de receita e usuario.
+
+CREATE TABLE IF NOT EXISTS receita (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(100),
     descricao VARCHAR(255),
@@ -8,8 +10,7 @@ CREATE TABLE receita (
     tipo_receita CHAR(1)
 );
 
--- Tabela de usuarios usada para autenticacao.
-CREATE TABLE usuario (
+CREATE TABLE IF NOT EXISTS usuario (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(100),
     login VARCHAR(50),

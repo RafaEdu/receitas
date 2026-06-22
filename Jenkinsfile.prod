@@ -8,6 +8,14 @@ pipeline {
             }
         }
 
+        stage('Migrations (Produção)') {
+            steps {
+                echo 'Aplicando migrations no banco de produção...'
+                sh 'docker compose up -d db-prod'
+                sh 'docker compose run --rm app-prod npm run migrate'
+            }
+        }
+
         stage('Deploy em Produção') {
             steps {
                 echo 'Publicando em Produção na porta 3000...'

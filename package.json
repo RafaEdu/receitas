@@ -6,9 +6,14 @@
   "main": "server/server.js",
   "scripts": {
     "start": "node server/server.js",
-    "test": "jest --runInBand"
+    "migrate": "node server/migrate.js",
+    "migrate:status": "node server/migrate.js --status",
+    "test": "jest --runInBand",
+    "lint": "eslint server/ tests/"
   },
   "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "eslint": "^9.0.0",
     "jest": "^29.7.0",
     "supertest": "^7.1.1"
   },

@@ -20,41 +20,6 @@ services:
     networks:
       - receitas-network
 
-  # --- INTEGRAÇÃO (Porta 3002) ---
-  db-integration:
-    image: postgres:15-alpine
-    environment:
-      POSTGRES_DB: receitas
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    volumes:
-      - ./ddl.sql:/docker-entrypoint-initdb.d/01-ddl.sql
-      - ./dml.sql:/docker-entrypoint-initdb.d/02-dml.sql
-      - db_integration_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d receitas"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-    networks:
-      - receitas-network
-
-  app-integration:
-    build: .
-    ports:
-      - "3002:3000"
-    environment:
-      - DB_HOST=db-integration
-      - DB_NAME=receitas
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
-      - PORT=3000
-    depends_on:
-      db-integration:
-        condition: service_healthy
-    networks:
-      - receitas-network
-
   # --- HOMOLOGAÇÃO (Porta 3001) ---
   db-homolog:
     image: postgres:15-alpine
@@ -63,8 +28,6 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
-      - ./ddl.sql:/docker-entrypoint-initdb.d/01-ddl.sql
-      - ./dml.sql:/docker-entrypoint-initdb.d/02-dml.sql
       - db_homolog_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d receitas"]
@@ -98,8 +61,6 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     volumes:
-      - ./ddl.sql:/docker-entrypoint-initdb.d/01-ddl.sql
-      - ./dml.sql:/docker-entrypoint-initdb.d/02-dml.sql
       - db_prod_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d receitas"]
@@ -127,6 +88,5 @@ services:
 
 volumes:
   jenkins_data:
-  db_integration_data:
   db_homolog_data:
   db_prod_data:
