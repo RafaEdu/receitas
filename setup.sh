@@ -12,7 +12,7 @@ fi
 
 echo "Comando detectado e selecionado: $COMPOSE_CMD"
 echo "=== Limpando resquícios antigos (os dados dos bancos NÃO são apagados, pois usam volumes nomeados) ==="
-$COMPOSE_CMD down --remove-orphans
+$COMPOSE_CMD down --remove-orphans -v
 rm -rf receitas-projeto
 
 echo "=== Clonando o repositório do GitHub ==="
