@@ -16,7 +16,6 @@ const app = express();
 const port = Number(process.env.PORT) || 3000;
 const clientDir = path.join(__dirname, "..", "client");
 const sessionSecret = process.env.SESSION_SECRET || "receitas-dev-secret";
-const variavelNuncaUsada = "teste do lint";
 
 // Pool de conexoes com o PostgreSQL para reutilizar conexoes de forma eficiente.
 const pool = new Pool({
