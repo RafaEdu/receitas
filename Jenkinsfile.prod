@@ -8,6 +8,14 @@ pipeline {
             }
         }
 
+        // ALTERAÇÃO: Adicionado o Build antes de rodar as migrations
+        stage('Build (Produção)') {
+            steps {
+                echo 'Construindo a imagem de produção atualizada...'
+                sh 'docker compose build app-prod'
+            }
+        }
+
         stage('Migrations (Produção)') {
             steps {
                 echo 'Aplicando migrations no banco de produção...'
@@ -19,7 +27,7 @@ pipeline {
         stage('Deploy em Produção') {
             steps {
                 echo 'Publicando em Produção na porta 3000...'
-                sh 'docker compose build app-prod'
+                // Apenas dá o up, pois o build já foi feito de forma isolada
                 sh 'docker compose up -d app-prod'
             }
         }
